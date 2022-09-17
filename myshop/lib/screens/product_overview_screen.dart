@@ -2,6 +2,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:myshop/providers/cart.dart';
+import 'package:myshop/providers/products.dart';
 import 'package:myshop/screens/cart_screen.dart';
 import 'package:myshop/widgets/badge.dart';
 import 'package:myshop/widgets/drawer.dart';
@@ -11,6 +12,7 @@ import 'package:provider/provider.dart';
 enum ProductFilters { Favourite, All }
 
 class ProductOverviewScreen extends StatefulWidget {
+  static const routeName = '/products';
   const ProductOverviewScreen({
     Key? key,
   }) : super(key: key);
@@ -19,6 +21,8 @@ class ProductOverviewScreen extends StatefulWidget {
   State<ProductOverviewScreen> createState() => _ProductOverviewScreenState();
 }
 
+var _isInit = true;
+var _isLoading = false;
 var _isFavouriteFilter = false;
 
 class _ProductOverviewScreenState extends State<ProductOverviewScreen> {
@@ -30,6 +34,35 @@ class _ProductOverviewScreenState extends State<ProductOverviewScreen> {
         _isFavouriteFilter = false;
       }
     });
+  }
+
+  @override
+  void initState() {
+    //! HACKKKKKK!
+    // Future.delayed(
+    //     Duration.zero, Provider.of<Products>(context).fetchandSetProducts);
+    super.initState();
+  }
+
+  @override
+  void didChangeDependencies() {
+    // if (mounted && _isInit) {
+    setState(() {
+      _isLoading = true;
+    });
+    Provider.of<Products>(context).fetchandSetProducts().then((_) {
+      setState(() {
+        _isLoading = false;
+      });
+    });
+    // }
+    // _isInit = false;
+    super.didChangeDependencies();
+  }
+
+  @override
+  void dispose() {
+    super.dispose();
   }
 
   @override
@@ -70,7 +103,11 @@ class _ProductOverviewScreenState extends State<ProductOverviewScreen> {
         ],
       ),
       drawer: const SideDrawer(),
-      body: ProductGrid(isFavourite: _isFavouriteFilter),
+      body: _isLoading
+          ? const Center(
+              child: CircularProgressIndicator(),
+            )
+          : ProductGrid(isFavourite: _isFavouriteFilter),
     );
   }
 }

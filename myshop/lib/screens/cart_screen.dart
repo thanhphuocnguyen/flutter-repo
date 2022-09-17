@@ -4,9 +4,16 @@ import 'package:myshop/providers/order.dart';
 import 'package:myshop/widgets/cart_item.dart';
 import 'package:provider/provider.dart';
 
-class CartScreen extends StatelessWidget {
+class CartScreen extends StatefulWidget {
   const CartScreen({Key? key}) : super(key: key);
   static const routeName = '/cart-page';
+
+  @override
+  State<CartScreen> createState() => _CartScreenState();
+}
+
+class _CartScreenState extends State<CartScreen> {
+  var _isLoading = false;
   @override
   Widget build(BuildContext context) {
     final cartData = Provider.of<Cart>(context);
@@ -39,11 +46,41 @@ class CartScreen extends StatelessWidget {
                     backgroundColor: Theme.of(context).primaryColor,
                   ),
                   TextButton(
-                    onPressed: (() {
-                      Provider.of<Order>(context, listen: false)
-                          .addOrder(listItem, cartData.totalPrice);
-                      cartData.clearCart();
-                    }),
+                    onPressed: cartData.itemCount <= 0 || _isLoading
+                        ? null
+                        : (() async {
+                            setState(() {
+                              _isLoading = true;
+                            });
+                            try {
+                              await Provider.of<Order>(context, listen: false)
+                                  .addOrder(listItem, cartData.totalPrice);
+                              cartData.clearCart();
+                            } catch (err) {
+                              print(err);
+                              await showDialog(
+                                  context: context,
+                                  builder: (ctx) => AlertDialog(
+                                        contentTextStyle: TextStyle(
+                                            color:
+                                                Theme.of(context).errorColor),
+                                        title: const Text('An error occurs!'),
+                                        content: const Text(
+                                            'Something went wrong. Try this action later.'),
+                                        actions: <Widget>[
+                                          TextButton(
+                                              onPressed: () {
+                                                Navigator.of(context).pop();
+                                              },
+                                              child: const Text('Ok'))
+                                        ],
+                                      ));
+                            } finally {
+                              setState(() {
+                                _isLoading = false;
+                              });
+                            }
+                          }),
                     style: TextButton.styleFrom(
                         textStyle: TextStyle(
                             color: Theme.of(context)

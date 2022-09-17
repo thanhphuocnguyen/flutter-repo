@@ -1,42 +1,20 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
+import 'package:myshop/models/http_exception.dart';
 import 'package:myshop/providers/product.dart';
+import 'package:http/http.dart' as http;
 
 class Products with ChangeNotifier {
   // ignore: prefer_final_fields
-  List<Product> _items = [
-    Product(
-      id: 'p1',
-      title: 'Red Shirt',
-      description: 'A red shirt - it is pretty red!',
-      price: 29.99,
-      imageUrl:
-          'https://cdn.pixabay.com/photo/2016/10/02/22/17/red-t-shirt-1710578_1280.jpg',
-    ),
-    Product(
-      id: 'p2',
-      title: 'Trousers',
-      description: 'A nice pair of trousers.',
-      price: 59.99,
-      imageUrl:
-          'https://upload.wikimedia.org/wikipedia/commons/thumb/e/e8/Trousers%2C_dress_%28AM_1960.022-8%29.jpg/512px-Trousers%2C_dress_%28AM_1960.022-8%29.jpg',
-    ),
-    Product(
-      id: 'p3',
-      title: 'Yellow Scarf',
-      description: 'Warm and cozy - exactly what you need for the winter.',
-      price: 19.99,
-      imageUrl:
-          'https://live.staticflickr.com/4043/4438260868_cc79b3369d_z.jpg',
-    ),
-    Product(
-      id: 'p4',
-      title: 'A Pan',
-      description: 'Prepare any meal you want.',
-      price: 49.99,
-      imageUrl:
-          'https://upload.wikimedia.org/wikipedia/commons/thumb/1/14/Cast-Iron-Pan.jpg/1024px-Cast-Iron-Pan.jpg',
-    ),
-  ];
+  static const String baseUrl =
+      'flutter-apis-c651f-default-rtdb.asia-southeast1.firebasedatabase.app';
+
+  final String? authToken;
+  final String? userId;
+
+  Products(this.authToken, this._items, this.userId);
+  List<Product> _items = [];
   List<Product> get items {
     return [..._items];
   }
@@ -49,30 +27,123 @@ class Products with ChangeNotifier {
     return _items.firstWhere((element) => element.id == id);
   }
 
-  void addProduct(Product product) {
-    if (_items.contains(product)) {}
-    final newProduct = Product(
-        description: product.description,
-        id: 'p${DateTime.now().microsecondsSinceEpoch.toString()}',
-        imageUrl: product.imageUrl,
-        price: product.price,
-        title: product.title);
-    _items.insert(0, newProduct);
-    notifyListeners();
+  Future<void> fetchandSetProducts([bool filterByUser = false]) async {
+    final filterQuery = filterByUser
+        ? {'orderBy': json.encode("creatorId"), 'equalTo': json.encode(userId)}
+        : {};
+    final productUri = Uri.https(baseUrl, '/products.json', {
+      'auth': '$authToken',
+      ...filterQuery,
+    });
+    try {
+      final response = await http.get(productUri);
+      if (response.statusCode == 200) {
+        final productParsed =
+            json.decode(response.body) as Map<String, dynamic>?;
+        final favouriteUri = Uri.https(
+            baseUrl, '/isFavourite/$userId.json', {'auth': '$authToken'});
+        final favResponse = await http.get(favouriteUri);
+        final favData = jsonDecode(favResponse.body);
+        List<Product> listProductParsed = [];
+        if (productParsed != null) {
+          productParsed.forEach((key, value) {
+            listProductParsed.add(Product(
+              id: key,
+              title: value['title'],
+              description: value['description'],
+              imageUrl: value['imageUrl'],
+              isFavourite: favData == null ? false : favData[key] ?? false,
+              price: value['price'],
+              authToken: value['authToken'],
+              creatorId: value['creatorId'],
+            ));
+          });
+          _items = listProductParsed;
+        }
+      } else {
+        throw CustomException(jsonDecode(response.body));
+      }
+    } catch (err) {
+      rethrow;
+    }
   }
 
-  void updateProduct(String id, Product editProduct) {
+  Future<void> addProduct(Product product) async {
+    final productUri =
+        Uri.https(baseUrl, '/products.json', {'auth': '$authToken'});
+    try {
+      final response = await http.post(productUri,
+          body: json.encode({
+            'description': product.description,
+            'imageUrl': product.imageUrl,
+            'price': product.price,
+            'title': product.title,
+            'isFavourite': product.isFavourite,
+            'creatorId': userId,
+          }));
+      if (response.statusCode == 200) {
+        final newProduct = Product(
+            description: product.description,
+            id: json.decode(response.body)['name'] as String,
+            imageUrl: product.imageUrl,
+            price: product.price,
+            title: product.title,
+            authToken: product.authToken,
+            creatorId: product.creatorId);
+        _items.insert(0, newProduct);
+        notifyListeners();
+      } else {
+        throw CustomException(json.decode(response.body)['message']);
+      }
+    } catch (err) {
+      rethrow;
+    }
+  }
+
+  Future<void> updateProduct(String id, Product editProduct) async {
+    final updateproductUri =
+        Uri.https(baseUrl, '/products/$id.json', {'auth': '$authToken'});
     final prodIndex = _items.indexWhere((element) => element.id == id);
     if (prodIndex >= 0) {
-      _items[prodIndex] = editProduct;
-      notifyListeners();
+      try {
+        final response = await http.patch(updateproductUri,
+            body: json.encode({
+              'title': editProduct.title,
+              'price': editProduct.price,
+              'description': editProduct.description,
+              'imageUrl': editProduct.imageUrl,
+              'isFavourite': editProduct.isFavourite,
+            }));
+        if (response.statusCode == 200) {
+          _items[prodIndex] = editProduct;
+          notifyListeners();
+        } else {
+          print(json.decode(response.body));
+          throw CustomException(json.decode(response.body)['message']);
+        }
+      } catch (err) {
+        print(err);
+        rethrow;
+      }
     } else {
       return;
     }
   }
 
-  void removeProductWhere(String prodId) {
-    _items.removeWhere((element) => element.id == prodId);
-    notifyListeners();
+  Future<void> removeProductWhere(String prodId) async {
+    final updateproductUri = Uri.https(baseUrl, '/products/$prodId.json');
+    try {
+      final response = await http.delete(updateproductUri);
+      if (response.statusCode == 200) {
+        _items.removeWhere((element) => element.id == prodId);
+        notifyListeners();
+      } else {
+        print(json.decode(response.body));
+        throw CustomException(json.decode(response.body)['message']);
+      }
+    } catch (err) {
+      print(err.toString());
+      rethrow;
+    }
   }
 }

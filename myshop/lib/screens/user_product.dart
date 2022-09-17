@@ -9,9 +9,14 @@ class UserProductScreen extends StatelessWidget {
   const UserProductScreen({Key? key}) : super(key: key);
   static const routeName = '/user-products';
 
+  Future<void> onRefreshProducts(BuildContext context) async {
+    await Provider.of<Products>(context, listen: false)
+        .fetchandSetProducts(true);
+  }
+
   @override
   Widget build(BuildContext context) {
-    final products = Provider.of<Products>(context, listen: true);
+    // final products = Provider.of<Products>(context, listen: false);
     return Scaffold(
       appBar: AppBar(
         title: const Text('Personal products'),
@@ -24,27 +29,46 @@ class UserProductScreen extends StatelessWidget {
         ],
       ),
       drawer: const SideDrawer(),
-      body: Padding(
-        padding: const EdgeInsets.all(8),
-        child: Column(
-          children: [
-            Expanded(
-              child: ListView.builder(
-                itemBuilder: (context, index) => Column(
-                  children: [
-                    UserProductItem(
-                      imageUrl: products.items[index].imageUrl,
-                      title: products.items[index].title,
-                      id: products.items[index].id,
-                    ),
-                    const Divider()
-                  ],
+      body: FutureBuilder(
+        future: onRefreshProducts(context),
+        builder: (context, snapshot) => snapshot.connectionState ==
+                ConnectionState.waiting
+            ? const Center(
+                child: CircularProgressIndicator(),
+              )
+            : RefreshIndicator(
+                onRefresh: (() => onRefreshProducts(context)),
+                child: Consumer<Products>(
+                  builder: ((context, productData, _) => Padding(
+                        padding: const EdgeInsets.all(8),
+                        child: productData.items.isEmpty
+                            ? const Center(
+                                child: Text('You have no product here'),
+                              )
+                            : Column(
+                                children: [
+                                  Expanded(
+                                    child: ListView.builder(
+                                      itemBuilder: (context, index) => Column(
+                                        children: [
+                                          UserProductItem(
+                                            imageUrl: productData
+                                                .items[index].imageUrl,
+                                            title:
+                                                productData.items[index].title,
+                                            id: productData.items[index].id,
+                                          ),
+                                          const Divider()
+                                        ],
+                                      ),
+                                      itemCount: productData.items.length,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                      )),
                 ),
-                itemCount: products.items.length,
               ),
-            ),
-          ],
-        ),
       ),
     );
   }

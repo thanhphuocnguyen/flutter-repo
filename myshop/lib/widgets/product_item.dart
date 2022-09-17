@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:myshop/providers/auth.dart';
 import 'package:myshop/providers/cart.dart';
 import 'package:myshop/providers/product.dart';
 import 'package:myshop/screens/product_detail_screen.dart';
@@ -11,8 +12,10 @@ class ProductItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
     final product = Provider.of<Product>(context, listen: false);
     final cart = Provider.of<Cart>(context, listen: false);
+    final auth = Provider.of<Auth>(context, listen: false);
     return ClipRRect(
       borderRadius: BorderRadius.circular(10),
       child: GridTile(
@@ -23,8 +26,37 @@ class ProductItem extends StatelessWidget {
                 product.isFavourite ? Icons.favorite : Icons.favorite_border,
                 color: Theme.of(context).colorScheme.secondary,
               ),
-              onPressed: (() {
-                product.toggleFavourite();
+              onPressed: (() async {
+                try {
+                  await product.toggleFavourite(auth.token, auth.userId);
+                  scaffoldMessenger.hideCurrentSnackBar();
+                  scaffoldMessenger.showSnackBar(SnackBar(
+                    content: const Text(
+                      'Successful!!',
+                      textAlign: TextAlign.center,
+                    ),
+                    duration: const Duration(seconds: 2),
+                    backgroundColor: Colors.green.shade500,
+                  ));
+                } catch (err) {
+                  print(err);
+                  await showDialog(
+                      context: context,
+                      builder: (ctx) => AlertDialog(
+                            contentTextStyle:
+                                TextStyle(color: Theme.of(context).errorColor),
+                            title: const Text('An error occurs!'),
+                            content: const Text(
+                                'Something went wrong. Try this action later.'),
+                            actions: <Widget>[
+                              TextButton(
+                                  onPressed: () {
+                                    Navigator.of(context).pop();
+                                  },
+                                  child: const Text('Ok'))
+                            ],
+                          ));
+                }
               }),
             ),
           ),
