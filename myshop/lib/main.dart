@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:myshop/helpers/custom_page_route.dart';
 import 'package:myshop/providers/auth.dart';
 import 'package:myshop/providers/cart.dart';
 import 'package:myshop/providers/order.dart';
@@ -53,21 +54,15 @@ class MyApp extends StatelessWidget {
         builder: (context, authData, _) => MaterialApp(
           title: 'My shop',
           theme: ThemeData(
-            // This is the theme of your application.
-            //
-            // Try running your application with "flutter run". You'll see the
-            // application has a blue toolbar. Then, without quitting the app, try
-            // changing the primarySwatch below to Colors.green and then invoke
-            // "hot reload" (press "r" in the console where you ran "flutter run",
-            // or simply save your changes to "hot reload" in a Flutter IDE).
-            // Notice that the counter didn't reset back to zero; the application
-            // is not restarted.
-            colorScheme: ColorScheme.fromSwatch(primarySwatch: Colors.amber)
-                .copyWith(secondary: Colors.orangeAccent),
-            primaryTextTheme: TextTheme(
-                headline6: TextStyle(color: Colors.red.shade400),
-                button: TextStyle(color: Colors.blueGrey.shade800)),
-          ),
+              colorScheme: ColorScheme.fromSwatch(primarySwatch: Colors.amber)
+                  .copyWith(secondary: Colors.orangeAccent),
+              primaryTextTheme: TextTheme(
+                  headline6: TextStyle(color: Colors.red.shade400),
+                  button: TextStyle(color: Colors.blueGrey.shade800)),
+              pageTransitionsTheme: PageTransitionsTheme(builders: {
+                TargetPlatform.android: CustomPageTransitionBuilder(),
+                TargetPlatform.iOS: CustomPageTransitionBuilder(),
+              })),
           home: authData.isAuth
               ? const ProductOverviewScreen()
               : FutureBuilder(

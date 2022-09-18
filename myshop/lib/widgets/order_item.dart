@@ -19,49 +19,57 @@ class _OrderItemWidgetState extends State<OrderItemWidget> {
   Widget build(BuildContext context) {
     return Card(
       margin: const EdgeInsets.all(10),
-      child: Column(children: <Widget>[
-        ListTile(
-          title: Text('\$ ${widget.order.amount}'),
-          subtitle: Text(
-              DateFormat('dd MM yyyy hh:mm').format(widget.order.dateTime)),
-          trailing: IconButton(
-            icon: Icon(_expanded ? Icons.expand_less : Icons.expand_more),
-            onPressed: () {
-              setState(() {
-                _expanded = !_expanded;
-              });
-            },
+      child: Column(
+        children: <Widget>[
+          ListTile(
+            title: Text('\$ ${widget.order.amount}'),
+            subtitle: Text(
+                DateFormat('dd MM yyyy hh:mm').format(widget.order.dateTime)),
+            trailing: IconButton(
+              icon: Icon(_expanded ? Icons.expand_less : Icons.expand_more),
+              onPressed: () {
+                setState(() {
+                  _expanded = !_expanded;
+                });
+              },
+            ),
           ),
-        ),
-        if (_expanded)
-          SizedBox(
-            height: min(widget.order.products.length * 20.0 + 100, 180),
-            child: ListView(
-              children: widget.order.products
-                  .map(
-                    (e) => Padding(
-                      padding: const EdgeInsets.all(8.0),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceAround,
-                        children: [
-                          Text(
-                            e.title,
-                            style: const TextStyle(
-                                fontSize: 18, fontWeight: FontWeight.bold),
-                          ),
-                          Text(
-                            '${e.quantity} x \$${e.price}',
-                            style: const TextStyle(
-                                fontSize: 18, color: Colors.grey),
-                          ),
-                        ],
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeIn,
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
+            height: _expanded
+                ? min(widget.order.products.length * 20.0 + 110, 100)
+                : 0,
+            child: SizedBox(
+              child: ListView(
+                children: widget.order.products
+                    .map(
+                      (e) => Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceAround,
+                          children: [
+                            Text(
+                              e.title,
+                              style: const TextStyle(
+                                  fontSize: 18, fontWeight: FontWeight.bold),
+                            ),
+                            Text(
+                              '${e.quantity} x \$${e.price}',
+                              style: const TextStyle(
+                                  fontSize: 18, color: Colors.grey),
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
-                  )
-                  .toList(),
+                    )
+                    .toList(),
+              ),
             ),
           )
-      ]),
+        ],
+      ),
     );
   }
 }
